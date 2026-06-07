@@ -131,8 +131,14 @@ class CAScraper(AirlineDirectSearcher):
 
     def _scrape_with_playwright(self, watch: WatchConfig) -> list[FlightLeg | RoundTripBundle]:
         # TODO: implement — see module docstring for CA endpoint details
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
+        logger.info(
+            "airline_direct CA search %s-%s %s",
+            watch.outbound_origin,
+            watch.outbound_destination,
+            watch.outbound_date.isoformat(),
+        )
         with sync_playwright() as p:
             launch_kwargs = {"headless": True}
             if self.proxy:
@@ -140,11 +146,13 @@ class CAScraper(AirlineDirectSearcher):
             browser = p.chromium.launch(**launch_kwargs)
             page = browser.new_page()
             results = []
+            forbidden = False
 
             def handle_response(response):
-                if "airchina.com.cn" in response.url and "search" in response.url.lower():
+                nonlocal forbidden
+                if "searchFlight" in response.url or "flightList" in response.url:
                     if response.status == 403:
-                        results.append({"__forbidden__": True})
+                        forbidden = True
                         return
                     try:
                         results.append(response.json())
@@ -153,13 +161,24 @@ class CAScraper(AirlineDirectSearcher):
 
             page.on("response", handle_response)
             try:
-                page.goto("https://www.airchina.com.cn/reserve/initSearchAction.do", wait_until="domcontentloaded")
-                page.wait_for_load_state("networkidle")
+                page.goto("https://www.airchina.com.cn/cn/booking/search-flight.shtml", wait_until="domcontentloaded")
+                page.fill('input[name="dCity"]', watch.outbound_origin)
+                page.fill('input[name="aCity"]', watch.outbound_destination)
+                page.fill('input[name="depDate"]', watch.outbound_date.strftime("%Y-%m-%d"))
+                with page.expect_response(
+                    lambda response: "searchFlight" in response.url or "flightList" in response.url,
+                    timeout=30000,
+                ):
+                    page.click('button[type="submit"]')
+                page.wait_for_load_state("networkidle", timeout=30000)
+            except PlaywrightTimeoutError:
+                logger.warning("airline_direct CA search timed out waiting for flight response")
+                return []
             finally:
                 browser.close()
 
-        if any(item.get("__forbidden__") for item in results if isinstance(item, dict)):
-            logger.warning("CA direct scraper returned 403; skipping")
+        if forbidden:
+            logger.warning("airline_direct CA direct scraper returned 403; skipping")
             return []
         out: list[FlightLeg | RoundTripBundle] = []
         for item in results:
@@ -174,7 +193,7 @@ class MUScraper(AirlineDirectSearcher):
     carrier_code = "MU"
 
     def _scrape_with_playwright(self, watch: WatchConfig) -> list[FlightLeg | RoundTripBundle]:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
         trip_type = "RT" if watch.return_date else "OW"
         url = (
@@ -185,6 +204,12 @@ class MUScraper(AirlineDirectSearcher):
         if watch.return_date:
             url += f"&retDate={watch.return_date.isoformat()}"
 
+        logger.info(
+            "airline_direct MU search %s-%s %s",
+            watch.outbound_origin,
+            watch.outbound_destination,
+            watch.outbound_date.isoformat(),
+        )
         with sync_playwright() as p:
             launch_kwargs = {"headless": True}
             if self.proxy:
@@ -192,11 +217,13 @@ class MUScraper(AirlineDirectSearcher):
             browser = p.chromium.launch(**launch_kwargs)
             page = browser.new_page()
             results = []
+            forbidden = False
 
             def handle_response(response):
+                nonlocal forbidden
                 if "/ceas/pc/search" in response.url:
                     if response.status == 403:
-                        results.append({"__forbidden__": True})
+                        forbidden = True
                         return
                     try:
                         results.append(response.json())
@@ -206,12 +233,16 @@ class MUScraper(AirlineDirectSearcher):
             page.on("response", handle_response)
             try:
                 page.goto(url, wait_until="domcontentloaded")
-                page.wait_for_load_state("networkidle")
+                page.wait_for_response(lambda response: "/ceas/pc/search" in response.url, timeout=30000)
+                page.wait_for_load_state("networkidle", timeout=30000)
+            except PlaywrightTimeoutError:
+                logger.warning("airline_direct MU search timed out waiting for flight response")
+                return []
             finally:
                 browser.close()
 
-        if any(item.get("__forbidden__") for item in results if isinstance(item, dict)):
-            logger.warning("MU direct scraper returned 403; skipping")
+        if forbidden:
+            logger.warning("airline_direct MU direct scraper returned 403; skipping")
             return []
         out: list[FlightLeg | RoundTripBundle] = []
         for item in results:
@@ -226,8 +257,14 @@ class CZScraper(AirlineDirectSearcher):
     carrier_code = "CZ"
 
     def _scrape_with_playwright(self, watch: WatchConfig) -> list[FlightLeg | RoundTripBundle]:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
 
+        logger.info(
+            "airline_direct CZ search %s-%s %s",
+            watch.outbound_origin,
+            watch.outbound_destination,
+            watch.outbound_date.isoformat(),
+        )
         with sync_playwright() as p:
             launch_kwargs = {"headless": True}
             if self.proxy:
@@ -235,11 +272,13 @@ class CZScraper(AirlineDirectSearcher):
             browser = p.chromium.launch(**launch_kwargs)
             page = browser.new_page()
             results = []
+            forbidden = False
 
             def handle_response(response):
-                if "/booking/searchFlight" in response.url or "/searchFlight" in response.url:
+                nonlocal forbidden
+                if "searchFlight" in response.url:
                     if response.status == 403:
-                        results.append({"__forbidden__": True})
+                        forbidden = True
                         return
                     try:
                         results.append(response.json())
@@ -249,12 +288,22 @@ class CZScraper(AirlineDirectSearcher):
             page.on("response", handle_response)
             try:
                 page.goto("https://www.csair.com/cn/booking/flight_searching.shtml", wait_until="domcontentloaded")
-                page.wait_for_load_state("networkidle")
+                page.fill("#deptCity", watch.outbound_origin)
+                page.fill("#arrvCity", watch.outbound_destination)
+                page.fill("#deptDate", watch.outbound_date.strftime("%Y-%m-%d"))
+                if watch.return_date:
+                    page.fill("#retuDate", watch.return_date.strftime("%Y-%m-%d"))
+                with page.expect_response(lambda response: "searchFlight" in response.url, timeout=30000):
+                    page.click("#searchBtn")
+                page.wait_for_load_state("networkidle", timeout=30000)
+            except PlaywrightTimeoutError:
+                logger.warning("airline_direct CZ search timed out waiting for flight response")
+                return []
             finally:
                 browser.close()
 
-        if any(item.get("__forbidden__") for item in results if isinstance(item, dict)):
-            logger.warning("CZ direct scraper returned 403; skipping")
+        if forbidden:
+            logger.warning("airline_direct CZ direct scraper returned 403; skipping")
             return []
         out: list[FlightLeg | RoundTripBundle] = []
         for item in results:
