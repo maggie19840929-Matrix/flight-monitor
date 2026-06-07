@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机票监控 · 配置</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+         background: #f0f2f5; color: #222; min-height: 100vh; }
+  header { background: #1677ff; color: #fff; padding: 16px 24px;
+           display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  .container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+  .card { background: #fff; border-radius: 12px; padding: 20px 24px;
+          box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 16px; }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px;
+             color: #333; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+  .trip-list { display: flex; flex-direction: column; gap: 12px; }
+  .trip-card { border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px;
+               display: flex; align-items: center; gap: 12px; }
+  .trip-card .route { font-size: 18px; font-weight: 700; color: #1677ff; flex: 1; }
+  .trip-card .meta { font-size: 13px; color: #888; flex: 2; line-height: 1.8; }
+  .trip-card .actions { display: flex; gap: 8px; }
+  btn, .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px;
+              border-radius: 8px; border: none; cursor: pointer; font-size: 14px;
+              font-weight: 500; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: #1677ff; color: #fff; }
+  .btn-danger  { background: #ff4d4f; color: #fff; }
+  .btn-ghost   { background: #f5f5f5; color: #555; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .form-row.single { grid-template-columns: 1fr; }
+  label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+  input, select { width: 100%; padding: 8px 12px; border: 1px solid #d9d9d9;
+                  border-radius: 8px; font-size: 14px; outline: none; }
+  input:focus, select:focus { border-color: #1677ff; box-shadow: 0 0 0 2px #e6f0ff; }
+  .tag { display: inline-block; background: #e6f0ff; color: #1677ff; border-radius: 4px;
+         padding: 2px 8px; font-size: 12px; margin: 2px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+                   z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; padding: 24px;
+           width: min(560px, 96vw); max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+  .toggle { display: flex; gap: 0; border: 1px solid #d9d9d9; border-radius: 8px;
+            overflow: hidden; width: fit-content; }
+  .toggle button { padding: 7px 18px; border: none; background: #fff;
+                   cursor: pointer; font-size: 14px; color: #555; }
+  .toggle button.active { background: #1677ff; color: #fff; }
+  .airlines-select { display: flex; flex-wrap: wrap; gap: 8px; }
+  .airline-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid #d9d9d9;
+                  cursor: pointer; font-size: 13px; user-select: none; }
+  .airline-chip.selected { background: #1677ff; color: #fff; border-color: #1677ff; }
+  .toast { position: fixed; top: 20px; right: 20px; background: #52c41a; color: #fff;
+           padding: 10px 18px; border-radius: 8px; font-size: 14px; z-index: 999;
+           opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .empty { text-align: center; color: #bbb; padding: 32px 0; font-size: 14px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center;
+                    margin-bottom: 16px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+  .section-header h2 { font-size: 15px; font-weight: 600; color: #333; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:24px">✈</span>
+  <h1>机票监控 · 配置管理</h1>
+</header>
+
+<div class="container">
+
+  <!-- 监控任务 -->
+  <div class="card">
+    <div class="section-header">
+      <h2>监控任务</h2>
+      <button class="btn btn-primary" onclick="openAdd()">＋ 新增任务</button>
+    </div>
+    <div class="trip-list" id="tripList">
+      <div class="empty">加载中…</div>
+    </div>
+  </div>
+
+  <!-- 通知 & 调度设置 -->
+  <div class="card">
+    <h2>通知 &amp; 调度设置</h2>
+    <div class="form-row">
+      <div>
+        <label>Bark Device Key（iOS 推送）</label>
+        <input id="barkKey" placeholder="粘贴 Bark App 里的 Key">
+      </div>
+      <div>
+        <label>PushPlus Token（微信推送，可选）</label>
+        <input id="pushplusToken" placeholder="留空则不启用">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>监控间隔（分钟）</label>
+        <input id="intervalMin" type="number" min="5" max="120" value="15">
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">保存设置</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 新增/编辑 Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">新增监控任务</h3>
+
+    <div class="form-row single" style="margin-bottom:12px">
+      <div>
+        <label>任务备注名</label>
+        <input id="fLabel" placeholder="例：暑假北京→香港">
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label style="margin-bottom:8px">行程类型</label>
+      <div class="toggle" id="tripTypeToggle">
+        <button class="active" onclick="setTripType('roundtrip',this)">往返</button>
+        <button onclick="setTripType('oneway',this)">单程</button>
+      </div>
+    </div>
+
+    <div class="form-row triple" style="margin-bottom:12px">
+      <div>
+        <label>出发机场</label>
+        <select id="fOrigin"></select>
+      </div>
+      <div>
+        <label>目的地机场</label>
+        <select id="fDest"></select>
+      </div>
+      <div>
+        <label>出发日期</label>
+        <input id="fDepDate" type="date">
+      </div>
+    </div>
+
+    <div class="form-row" id="returnRow" style="margin-bottom:12px">
+      <div>
+        <label>返程日期</label>
+        <input id="fRetDate" type="date">
+      </div>
+      <div></div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <label style="margin-bottom:8px">舱位</label>
+      <div class="toggle">
+        <button class="active" onclick="setCabin('economy',this)">经济舱</button>
+        <button onclick="setCabin('business',this)">商务舱</button>
+        <button onclick="setCabin('first',this)">头等舱</button>
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:12px">
+      <div>
+        <label>价格上限（元，超过不推送）</label>
+        <input id="fThreshold" type="number" min="0" value="1500">
+      </div>
+      <div>
+        <label>乘客人数</label>
+        <input id="fPassengers" type="number" min="1" max="9" value="1">
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <label style="margin-bottom:8px">指定航司（不选 = 所有航司）</label>
+      <div class="airlines-select" id="airlinesSelect"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitWatch()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AIRPORTS = [
+  {code:"PEK",name:"北京首都"},
+  {code:"PKX",name:"北京大兴"},
+  {code:"SHA",name:"上海虹桥"},
+  {code:"PVG",name:"上海浦东"},
+  {code:"CAN",name:"广州"},
+  {code:"SZX",name:"深圳"},
+  {code:"CTU",name:"成都天府"},
+  {code:"TFU",name:"成都双流"},
+  {code:"HGH",name:"杭州"},
+  {code:"NKG",name:"南京"},
+  {code:"WUH",name:"武汉"},
+  {code:"XIY",name:"西安"},
+  {code:"CKG",name:"重庆"},
+  {code:"KMG",name:"昆明"},
+  {code:"XMN",name:"厦门"},
+  {code:"CSX",name:"长沙"},
+  {code:"TAO",name:"青岛"},
+  {code:"DLC",name:"大连"},
+  {code:"HRB",name:"哈尔滨"},
+  {code:"SYX",name:"三亚"},
+  {code:"HKG",name:"香港"},
+  {code:"MFM",name:"澳门"},
+  {code:"TPE",name:"台北桃园"},
+  {code:"NRT",name:"东京成田"},
+  {code:"HND",name:"东京羽田"},
+  {code:"ICN",name:"首尔仁川"},
+  {code:"BKK",name:"曼谷素万那普"},
+  {code:"SIN",name:"新加坡"},
+  {code:"KUL",name:"吉隆坡"},
+];
+
+const AIRLINES = [
+  {code:"CA",name:"国航"},
+  {code:"MU",name:"东航"},
+  {code:"CZ",name:"南航"},
+  {code:"CX",name:"国泰"},
+  {code:"HU",name:"海航"},
+  {code:"3U",name:"四川航空"},
+  {code:"ZH",name:"深航"},
+  {code:"MF",name:"厦航"},
+  {code:"GS",name:"天津航"},
+];
+
+let editId = null;
+let tripType = "roundtrip";
+let cabin = "economy";
+let selectedAirlines = [];
+
+// 初始化下拉机场
+function initAirportSelects() {
+  ["fOrigin","fDest"].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = AIRPORTS.map(a =>
+      `<option value="${a.code}">${a.name}（${a.code}）</option>`
+    ).join("");
+  });
+}
+
+// 初始化航司选择
+function initAirlinesSelect() {
+  const el = document.getElementById("airlinesSelect");
+  el.innerHTML = AIRLINES.map(a =>
+    `<div class="airline-chip" data-code="${a.code}" onclick="toggleAirline(this)">
+      ${a.name} ${a.code}
+    </div>`
+  ).join("");
+}
+
+function toggleAirline(el) {
+  const code = el.dataset.code;
+  if (selectedAirlines.includes(code)) {
+    selectedAirlines = selectedAirlines.filter(c => c !== code);
+    el.classList.remove("selected");
+  } else {
+    selectedAirlines.push(code);
+    el.classList.add("selected");
+  }
+}
+
+function setTripType(type, btn) {
+  tripType = type;
+  document.querySelectorAll("#tripTypeToggle button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("returnRow").style.display = type === "roundtrip" ? "" : "none";
+}
+
+function setCabin(c, btn) {
+  cabin = c;
+  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+function openAdd() {
+  editId = null;
+  tripType = "roundtrip";
+  cabin = "economy";
+  selectedAirlines = [];
+  document.getElementById("modalTitle").textContent = "新增监控任务";
+  document.getElementById("fLabel").value = "";
+  document.getElementById("fDepDate").value = "";
+  document.getElementById("fRetDate").value = "";
+  document.getElementById("fThreshold").value = "1500";
+  document.getElementById("fPassengers").value = "1";
+  document.querySelectorAll("#tripTypeToggle button")[0].click();
+  document.querySelectorAll(".toggle button")[2].parentElement.querySelectorAll("button")[0].click();
+  document.querySelectorAll(".airline-chip").forEach(c => c.classList.remove("selected"));
+  document.getElementById("modal").classList.add("open");
+}
+
+function openEdit(w) {
+  editId = w.id;
+  tripType = w.trip_type || "roundtrip";
+  cabin = w.cabin || "economy";
+  selectedAirlines = [...(w.airlines || [])];
+  document.getElementById("modalTitle").textContent = "编辑监控任务";
+  document.getElementById("fLabel").value = w.label || "";
+  document.getElementById("fOrigin").value = w.outbound?.origin || "";
+  document.getElementById("fDest").value = w.outbound?.destination || "";
+  document.getElementById("fDepDate").value = w.outbound?.date || "";
+  document.getElementById("fRetDate").value = w.return?.date || "";
+  document.getElementById("fThreshold").value = w.price_threshold || 1500;
+  document.getElementById("fPassengers").value = w.passengers || 1;
+
+  // trip type toggle
+  const ttBtns = document.querySelectorAll("#tripTypeToggle button");
+  ttBtns.forEach(b => b.classList.remove("active"));
+  ttBtns[tripType === "roundtrip" ? 0 : 1].classList.add("active");
+  document.getElementById("returnRow").style.display = tripType === "roundtrip" ? "" : "none";
+
+  // cabin toggle
+  const cabinMap = {economy:0, business:1, first:2};
+  const cBtns = document.querySelectorAll(".toggle")[1].querySelectorAll("button");
+  cBtns.forEach(b => b.classList.remove("active"));
+  cBtns[cabinMap[cabin] ?? 0].classList.add("active");
+
+  // airlines
+  document.querySelectorAll(".airline-chip").forEach(el => {
+    if (selectedAirlines.includes(el.dataset.code)) el.classList.add("selected");
+    else el.classList.remove("selected");
+  });
+
+  document.getElementById("modal").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+}
+
+async function submitWatch() {
+  const origin = document.getElementById("fOrigin").value;
+  const dest   = document.getElementById("fDest").value;
+  const depDate = document.getElementById("fDepDate").value;
+  const retDate = document.getElementById("fRetDate").value;
+  const label   = document.getElementById("fLabel").value || `${origin}→${dest}`;
+  const threshold = parseFloat(document.getElementById("fThreshold").value);
+  const passengers = parseInt(document.getElementById("fPassengers").value);
+
+  if (!depDate) { showToast("请选择出发日期", true); return; }
+  if (tripType === "roundtrip" && !retDate) { showToast("请选择返程日期", true); return; }
+
+  const id = editId || "trip_" + Date.now();
+  const body = {
+    id, label,
+    trip_type: tripType,
+    cabin,
+    passengers,
+    airlines: selectedAirlines,
+    price_threshold: threshold,
+    currency: "CNY",
+    outbound: { origin, destination: dest, date: depDate },
+  };
+  if (tripType === "roundtrip") {
+    body.return = { origin: dest, destination: origin, date: retDate };
+  }
+
+  const url = editId ? `/api/watch/${editId}` : "/api/watch";
+  const method = editId ? "PUT" : "POST";
+  const resp = await fetch(url, { method, headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+  if ((await resp.json()).ok) {
+    closeModal();
+    showToast("保存成功");
+    loadConfig();
+  }
+}
+
+async function deleteWatch(id) {
+  if (!confirm("确认删除这条监控任务？")) return;
+  await fetch(`/api/watch/${id}`, {method:"DELETE"});
+  showToast("已删除");
+  loadConfig();
+}
+
+async function saveSettings() {
+  const body = {
+    bark_key: document.getElementById("barkKey").value.trim(),
+    pushplus_token: document.getElementById("pushplusToken").value.trim(),
+    interval_minutes: parseInt(document.getElementById("intervalMin").value),
+  };
+  const resp = await fetch("/api/settings", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+  if ((await resp.json()).ok) showToast("设置已保存，重启监控生效");
+}
+
+async function loadConfig() {
+  const cfg = await fetch("/api/config").then(r => r.json());
+  // 填设置
+  document.getElementById("barkKey").value = cfg.notifiers?.bark?.device_key || "";
+  document.getElementById("pushplusToken").value = cfg.notifiers?.pushplus?.token || "";
+  document.getElementById("intervalMin").value = cfg.scheduler?.interval_minutes || 15;
+
+  // 渲染任务列表
+  const list = document.getElementById("tripList");
+  const watches = cfg.watch_list || [];
+  if (!watches.length) { list.innerHTML = '<div class="empty">暂无监控任务，点右上角新增</div>'; return; }
+
+  const cabinLabel = {economy:"经济舱", business:"商务舱", first:"头等舱"};
+  list.innerHTML = watches.map(w => `
+    <div class="trip-card">
+      <div class="route">${w.outbound?.origin} → ${w.outbound?.destination}</div>
+      <div class="meta">
+        ${w.label}<br>
+        ${w.outbound?.date}${w.return ? " ⇄ " + w.return.date : "（单程）"}
+        &nbsp;·&nbsp;${cabinLabel[w.cabin] || w.cabin}
+        &nbsp;·&nbsp;¥${w.price_threshold} 以内<br>
+        ${(w.airlines?.length ? w.airlines : ["所有航司"]).map(a => `<span class="tag">${a}</span>`).join("")}
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick='openEdit(${JSON.stringify(w)})'>编辑</button>
+        <button class="btn btn-danger" onclick="deleteWatch('${w.id}')">删除</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = isError ? "#ff4d4f" : "#52c41a";
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// 点 overlay 关闭
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+initAirportSelects();
+initAirlinesSelect();
+loadConfig();
+</script>
+</body>
+</html>
