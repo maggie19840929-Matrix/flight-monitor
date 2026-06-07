@@ -314,9 +314,77 @@ class CZScraper(AirlineDirectSearcher):
         return _parse_airline_json(raw, watch, self.carrier_code)
 
 
+class CXScraper(AirlineDirectSearcher):
+    """国泰航空 (Cathay Pacific) — 主要运营香港出发的国际/两岸港澳航线。"""
+    carrier_code = "CX"
+
+    def _scrape_with_playwright(self, watch: WatchConfig) -> list[FlightLeg | RoundTripBundle]:
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright
+
+        logger.info(
+            "airline_direct CX search %s-%s %s",
+            watch.outbound_origin,
+            watch.outbound_destination,
+            watch.outbound_date.isoformat(),
+        )
+        # 国泰搜索页：URL hash 携带参数，JS 渲染后触发 /api/v1/availability 的 XHR
+        trip = "roundtrip" if watch.return_date else "oneway"
+        url = (
+            f"https://www.cathaypacific.com/cx/zh_CN/flights/flight-search.html"
+            f"#origin={watch.outbound_origin}"
+            f"&destination={watch.outbound_destination}"
+            f"&departureDate={watch.outbound_date.isoformat()}"
+            f"&tripType={trip}"
+            f"&adult={watch.passengers}"
+            + (f"&returnDate={watch.return_date.isoformat()}" if watch.return_date else "")
+        )
+
+        with sync_playwright() as p:
+            launch_kwargs = {"headless": True}
+            if self.proxy:
+                launch_kwargs["proxy"] = {"server": self.proxy.get("https") or self.proxy.get("http")}
+            browser = p.chromium.launch(**launch_kwargs)
+            page = browser.new_page()
+            results = []
+            forbidden = False
+
+            def handle_response(response):
+                nonlocal forbidden
+                if "availability" in response.url or "flightSearch" in response.url or "searchFlight" in response.url:
+                    if response.status == 403:
+                        forbidden = True
+                        return
+                    try:
+                        results.append(response.json())
+                    except Exception:
+                        pass
+
+            page.on("response", handle_response)
+            try:
+                page.goto(url, wait_until="domcontentloaded")
+                page.wait_for_load_state("networkidle", timeout=30000)
+            except PlaywrightTimeoutError:
+                logger.warning("airline_direct CX search timed out")
+                return []
+            finally:
+                browser.close()
+
+        if forbidden:
+            logger.warning("airline_direct CX returned 403; skipping")
+            return []
+        out: list[FlightLeg | RoundTripBundle] = []
+        for item in results:
+            out.extend(self._parse_response(item, watch))
+        return out
+
+    def _parse_response(self, raw: Any, watch: WatchConfig) -> list[FlightLeg | RoundTripBundle]:
+        return _parse_airline_json(raw, watch, self.carrier_code)
+
+
 # Registry: add new airline scrapers here
 AIRLINE_SCRAPERS: dict[str, type[AirlineDirectSearcher]] = {
     "CA": CAScraper,
     "MU": MUScraper,
     "CZ": CZScraper,
+    "CX": CXScraper,
 }

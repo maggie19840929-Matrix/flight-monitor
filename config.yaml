@@ -21,6 +21,7 @@ watch_list:
       - CA                 # 国航
       - MU                 # 东航
       - CZ                 # 南航
+      - CX                 # 国泰
     price_threshold: 1200  # 单程含税价格上限（元），超过不推送
     currency: CNY
 
@@ -46,7 +47,7 @@ sources:
     enabled: true
     api_key: ""
   fliggy:
-    enabled: false
+    enabled: true
     api_key: ""
   airline_direct:
     enabled: true          # 直连各航司官网
@@ -54,6 +55,7 @@ sources:
       CA: "https://www.airchina.com.cn"
       MU: "https://www.ceair.com"
       CZ: "https://www.csair.com"
+      CX: "https://www.cathaypacific.com"
 
 # 调度设置
 scheduler:
