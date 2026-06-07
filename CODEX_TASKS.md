@@ -311,3 +311,57 @@ INFO monitor: Alert sent via BarkNotifier for CA1234 ¥980
 - **Respect jitter**: `BaseSearcher._jitter()` is already called in `search()` — do not add extra sleeps.
 - If an airline endpoint returns 403 after retry, log a warning and return `[]` (don't raise).
 - All timestamps stored to DB must be UTC ISO-8601 strings.
+
+---
+
+## 15  修复 airline_direct 搜索表单（必须补实现）
+
+当前三个航司 Playwright scraper 只打开了首页，**没有填搜索条件**，导致拿不到目标航班数据。
+请按以下方式补全每个航司的 `_scrape_with_playwright()`：
+
+### CA（国航）
+```python
+page.goto("https://www.airchina.com.cn/cn/booking/search-flight.shtml", wait_until="domcontentloaded")
+# 填出发地
+page.fill('input[name="dCity"]', watch.outbound_origin)
+# 填目的地
+page.fill('input[name="aCity"]', watch.outbound_destination)
+# 填日期
+page.fill('input[name="depDate"]', watch.outbound_date.strftime("%Y-%m-%d"))
+# 提交
+page.click('button[type="submit"]')
+page.wait_for_load_state("networkidle", timeout=30000)
+```
+拦截包含 `searchFlight` 或 `flightList` 的 XHR response 即为数据。
+
+### MU（东航）
+```python
+url = (
+    "https://www.ceair.com/booking/flight-search_V4.html#/"
+    f"flight-search?tripType={'RT' if watch.return_date else 'OW'}"
+    f"&depCity={watch.outbound_origin}&arrCity={watch.outbound_destination}"
+    f"&depDate={watch.outbound_date.isoformat()}"
+    + (f"&retDate={watch.return_date.isoformat()}" if watch.return_date else "")
+)
+page.goto(url, wait_until="domcontentloaded")
+page.wait_for_load_state("networkidle", timeout=30000)
+```
+拦截包含 `/ceas/pc/search` 的 response。
+
+### CZ（南航）
+```python
+page.goto("https://www.csair.com/cn/booking/flight_searching.shtml", wait_until="domcontentloaded")
+page.fill('#deptCity', watch.outbound_origin)
+page.fill('#arrvCity', watch.outbound_destination)
+page.fill('#deptDate', watch.outbound_date.strftime("%Y-%m-%d"))
+if watch.return_date:
+    page.fill('#retuDate', watch.return_date.strftime("%Y-%m-%d"))
+page.click('#searchBtn')
+page.wait_for_load_state("networkidle", timeout=30000)
+```
+拦截包含 `searchFlight` 的 response。
+
+### 通用要求
+- 拦截到 403 时 log warning 并返回 `[]`，不抛异常
+- 如果 30s 内无数据响应，返回 `[]`
+- 完成后运行 `python main.py --once` 确认日志中出现 airline_direct 的搜索记录
