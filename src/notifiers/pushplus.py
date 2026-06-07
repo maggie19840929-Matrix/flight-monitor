@@ -20,4 +20,11 @@ class PushPlusNotifier(BaseNotifier):
 
     def _send(self, alert: Alert, message: str) -> bool:
         # TODO: POST JSON; check resp["code"] == 200
-        raise NotImplementedError("Codex: implement PushPlusNotifier._send")
+        payload = {
+            "token": self.cfg["token"],
+            "title": "机票提醒",
+            "content": message.replace("\n", "<br>"),
+            "template": self.cfg.get("template", "html"),
+        }
+        resp = requests.post(self._API, json=payload, timeout=15)
+        return resp.json().get("code") == 200

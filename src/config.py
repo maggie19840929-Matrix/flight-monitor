@@ -40,7 +40,39 @@ class AppConfig:
         for entry in self._raw.get("watch_list", []):
             # TODO: map YAML dict → WatchConfig dataclass
             # Hint: parse dates with date.fromisoformat()
-            raise NotImplementedError("Codex: implement _parse_watch_list")
+            try:
+                trip_type = TripType(entry["trip_type"])
+                outbound = entry["outbound"]
+
+                return_origin = None
+                return_destination = None
+                return_date = None
+                if trip_type == TripType.ROUNDTRIP:
+                    inbound = entry["return"]
+                    return_origin = inbound["origin"]
+                    return_destination = inbound["destination"]
+                    return_date = date.fromisoformat(inbound["date"])
+
+                result.append(
+                    WatchConfig(
+                        id=entry["id"],
+                        label=entry["label"],
+                        trip_type=trip_type,
+                        outbound_origin=outbound["origin"],
+                        outbound_destination=outbound["destination"],
+                        outbound_date=date.fromisoformat(outbound["date"]),
+                        cabin=Cabin(entry["cabin"]),
+                        passengers=entry["passengers"],
+                        airlines=entry.get("airlines", []),
+                        price_threshold=entry["price_threshold"],
+                        currency=entry["currency"],
+                        return_origin=return_origin,
+                        return_destination=return_destination,
+                        return_date=return_date,
+                    )
+                )
+            except KeyError as exc:
+                raise ValueError(f"Missing required watch_list field: {exc.args[0]}") from exc
         return result
 
     def proxy_dict(self) -> dict[str, str] | None:

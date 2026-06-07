@@ -24,5 +24,11 @@ def build_searchers(sources_cfg: dict[str, Any], proxy: dict | None) -> list[Bas
     # TODO: if sources_cfg["airline_direct"]["enabled"]:
     #           for carrier_code, ScrClass in AIRLINE_SCRAPERS.items():
     #               append ScrClass(sources_cfg["airline_direct"], proxy)
-    raise NotImplementedError("Codex: implement build_searchers")
+    if sources_cfg.get("ctrip", {}).get("enabled"):
+        searchers.append(CtripSearcher(sources_cfg["ctrip"], proxy))
+    if sources_cfg.get("qunar", {}).get("enabled"):
+        searchers.append(QunarSearcher(sources_cfg["qunar"], proxy))
+    if sources_cfg.get("airline_direct", {}).get("enabled"):
+        for carrier_code, ScrClass in AIRLINE_SCRAPERS.items():
+            searchers.append(ScrClass(sources_cfg["airline_direct"], proxy))
     return searchers

@@ -41,7 +41,9 @@ class FlightLeg:
         # TODO: validate IATA codes are 2-3 uppercase letters
         # TODO: assert arrival_time > departure_time
         # TODO: assert price >= 0
-        pass
+        assert self.arrival_time > self.departure_time
+        assert self.price >= 0
+        self.airline = self.airline.upper()
 
 
 @dataclass
@@ -78,7 +80,10 @@ class WatchConfig:
     def __post_init__(self):
         if self.trip_type == TripType.ROUNDTRIP:
             # TODO: assert return fields are set and return_date > outbound_date
-            pass
+            assert self.return_origin is not None
+            assert self.return_destination is not None
+            assert self.return_date is not None
+            assert self.return_date > self.outbound_date
 
 
 @dataclass

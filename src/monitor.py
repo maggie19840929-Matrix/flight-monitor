@@ -40,7 +40,22 @@ class Monitor:
         """
         logger.info("Starting monitor cycle at %s", datetime.utcnow().isoformat())
         # TODO: implement full cycle
-        raise NotImplementedError("Codex: implement Monitor.run_cycle")
+        max_workers = min(max(len(self.searchers) * len(self.cfg.watch_list), 1), 8)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {
+                pool.submit(self._search_one, searcher, watch): (searcher, watch)
+                for watch in self.cfg.watch_list
+                for searcher in self.searchers
+            }
+            for future in concurrent.futures.as_completed(futures):
+                _, watch = futures[future]
+                try:
+                    results = future.result()
+                    self._fire_alerts(watch, results)
+                except Exception as exc:
+                    logger.error("Search failed: %s", exc)
+
+        self.storage.prune_old(self.cfg.storage.get("keep_history_days", 30))
 
     def _search_one(self, searcher: BaseSearcher, watch: WatchConfig) -> list:
         """Single searcher × single watch — called in thread pool."""

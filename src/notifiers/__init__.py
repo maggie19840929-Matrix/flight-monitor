@@ -14,5 +14,9 @@ def build_notifiers(notifiers_cfg: dict[str, Any]) -> list[BaseNotifier]:
     Pattern: if notifiers_cfg["bark"]["enabled"] → append BarkNotifier(cfg["bark"])
     """
     # TODO: implement
-    raise NotImplementedError("Codex: implement build_notifiers")
-    return []
+    out: list[BaseNotifier] = []
+    if notifiers_cfg.get("bark", {}).get("enabled"):
+        out.append(BarkNotifier(notifiers_cfg["bark"]))
+    if notifiers_cfg.get("pushplus", {}).get("enabled"):
+        out.append(PushPlusNotifier(notifiers_cfg["pushplus"]))
+    return out
