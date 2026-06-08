@@ -92,6 +92,16 @@
         <input id="barkKey" placeholder="粘贴 Bark App 里的 Key">
       </div>
       <div>
+        <label>Telegram Bot Token</label>
+        <input id="telegramToken" placeholder="BotFather 给的 Token">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label>Telegram Chat ID</label>
+        <input id="telegramChatId" placeholder="你的 Chat ID">
+      </div>
+      <div>
         <label>PushPlus Token（微信推送，可选）</label>
         <input id="pushplusToken" placeholder="留空则不启用">
       </div>
@@ -387,6 +397,8 @@ async function saveSettings() {
   const body = {
     bark_key: document.getElementById("barkKey").value.trim(),
     pushplus_token: document.getElementById("pushplusToken").value.trim(),
+    telegram_token: document.getElementById("telegramToken").value.trim(),
+    telegram_chat_id: document.getElementById("telegramChatId").value.trim(),
     interval_minutes: parseInt(document.getElementById("intervalMin").value),
   };
   const resp = await fetch("/api/settings", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
@@ -398,6 +410,8 @@ async function loadConfig() {
   // 填设置
   document.getElementById("barkKey").value = cfg.notifiers?.bark?.device_key || "";
   document.getElementById("pushplusToken").value = cfg.notifiers?.pushplus?.token || "";
+  document.getElementById("telegramToken").value = cfg.notifiers?.telegram?.token || "";
+  document.getElementById("telegramChatId").value = cfg.notifiers?.telegram?.chat_id || "";
   document.getElementById("intervalMin").value = cfg.scheduler?.interval_minutes || 15;
 
   // 渲染任务列表

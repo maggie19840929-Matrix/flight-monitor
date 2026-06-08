@@ -6,6 +6,7 @@ from typing import Any
 from .base import BaseNotifier
 from .bark import BarkNotifier
 from .pushplus import PushPlusNotifier
+from .telegram import TelegramNotifier
 
 
 def build_notifiers(notifiers_cfg: dict[str, Any]) -> list[BaseNotifier]:
@@ -19,4 +20,6 @@ def build_notifiers(notifiers_cfg: dict[str, Any]) -> list[BaseNotifier]:
         out.append(BarkNotifier(notifiers_cfg["bark"]))
     if notifiers_cfg.get("pushplus", {}).get("enabled"):
         out.append(PushPlusNotifier(notifiers_cfg["pushplus"]))
+    if notifiers_cfg.get("telegram", {}).get("enabled"):
+        out.append(TelegramNotifier(notifiers_cfg["telegram"]))
     return out

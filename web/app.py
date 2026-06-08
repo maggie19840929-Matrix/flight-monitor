@@ -75,6 +75,10 @@ def save_settings():
     cfg["notifiers"]["bark"]["enabled"] = bool(data.get("bark_key", ""))
     cfg["notifiers"]["pushplus"]["token"] = data.get("pushplus_token", "")
     cfg["notifiers"]["pushplus"]["enabled"] = bool(data.get("pushplus_token", ""))
+    cfg["notifiers"].setdefault("telegram", {})
+    cfg["notifiers"]["telegram"]["token"] = data.get("telegram_token", "")
+    cfg["notifiers"]["telegram"]["chat_id"] = data.get("telegram_chat_id", "")
+    cfg["notifiers"]["telegram"]["enabled"] = bool(data.get("telegram_token") and data.get("telegram_chat_id"))
     _save(cfg)
     return jsonify({"ok": True})
 

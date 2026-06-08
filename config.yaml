@@ -85,6 +85,10 @@ notifiers:
     username: ""
     password: ""
     to: ""
+  telegram:
+    enabled: false
+    token: ""              # BotFather 给的 Bot Token
+    chat_id: ""            # 你的 Chat ID
   webhook:
     enabled: false
     url: ""                # 自定义 Webhook（企业微信、飞书等）
