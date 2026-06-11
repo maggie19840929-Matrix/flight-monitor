@@ -79,6 +79,17 @@ class BaseNotifier(abc.ABC):
             # TODO: log exc
             return False
 
+    def send_text(self, message: str) -> bool:
+        """Send a plain operational status message, if supported."""
+        try:
+            return self._send_text(message)
+        except Exception as exc:
+            # TODO: log exc
+            return False
+
+    def _send_text(self, message: str) -> bool:
+        return False
+
     @abc.abstractmethod
     def _send(self, alert: Alert, message: str) -> bool:
         """Source-specific send implementation."""

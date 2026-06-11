@@ -14,6 +14,9 @@ from .base import BaseNotifier
 
 class FeishuNotifier(BaseNotifier):
     def _send(self, alert: Alert, message: str) -> bool:
+        return self._send_text(message)
+
+    def _send_text(self, message: str) -> bool:
         resp = requests.post(
             self.cfg["webhook_url"],
             json={"msg_type": "text", "content": {"text": message}},
