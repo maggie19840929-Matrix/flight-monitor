@@ -5,11 +5,14 @@ Each searcher implements search() for one data source.
 from __future__ import annotations
 
 import abc
+import logging
 import random
 import time
 from typing import Any
 
 from ..models import FlightLeg, RoundTripBundle, WatchConfig
+
+logger = logging.getLogger(__name__)
 
 
 class BaseSearcher(abc.ABC):
@@ -30,6 +33,7 @@ class BaseSearcher(abc.ABC):
             return self._search(watch)
         except Exception as exc:
             # TODO: log exc with source_name and watch.id; return []
+            logger.exception("Search failed for source=%s watch=%s: %s", self.source_name, watch.id, exc)
             return []
 
     # ------------------------------------------------------------------

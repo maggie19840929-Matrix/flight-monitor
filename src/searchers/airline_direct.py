@@ -232,8 +232,8 @@ class MUScraper(AirlineDirectSearcher):
 
             page.on("response", handle_response)
             try:
-                page.goto(url, wait_until="domcontentloaded")
-                page.wait_for_response(lambda response: "/ceas/pc/search" in response.url, timeout=30000)
+                with page.expect_response(lambda response: "/ceas/pc/search" in response.url, timeout=30000):
+                    page.goto(url, wait_until="domcontentloaded")
                 page.wait_for_load_state("networkidle", timeout=30000)
             except PlaywrightTimeoutError:
                 logger.warning("airline_direct MU search timed out waiting for flight response")

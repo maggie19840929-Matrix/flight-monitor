@@ -62,6 +62,12 @@ class Monitor:
         results = searcher.search(watch)
         results = searcher._filter_by_airline(results, watch.airlines)
         results = searcher._filter_by_price(results, watch.price_threshold)
+        logger.info(
+            "Search completed: source=%s watch=%s results=%d",
+            type(searcher).__name__,
+            watch.id,
+            len(results),
+        )
         return results
 
     def _fire_alerts(self, watch: WatchConfig,
